@@ -213,6 +213,27 @@ void MainWindow::startComputation() {
     
     running = false;
     
+    // Get results from computation
+    int its = args[0].its;
+    double r1 = args[0].res_1;
+    double r2 = args[0].res_2;
+    double r3 = args[0].res_3;
+    double r4 = args[0].res_4;
+    double t1 = args[0].t1;
+    double t2 = args[0].t2;
+
+    // Print results to terminal in the required format
+    const int task = 6;
+
+    printf(
+        "gui_app : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f\n"
+        "      It = %d E = %e K = %d Nx = %d Ny = %d P = %d\n",
+        task, 
+        r1, r2, r3, r4, 
+        t1, t2, 
+        its, eps, k, 
+        nx, ny, p);
+    
     // Update info panel
     updateInfoPanel();
 }
