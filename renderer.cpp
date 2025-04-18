@@ -40,7 +40,45 @@ void Renderer::setData(double *data, int width, int height) {
     this->data = data;
     this->dataWidth = width;
     this->dataHeight = height;
-    calculateMaxValue();
+    
+    // Update maxValue based on the current mode
+    if (mode == what_to_paint::residual && func != nullptr) {
+        // Recalculate residual immediately
+        double hx = (b - a) / (dataWidth - 1);
+        double hy = (d - c) / (dataHeight - 1);
+        double maxResidual = 0.0;
+        
+        for (int i = 0; i < dataWidth - 1; i++) {
+            for (int j = 0; j < dataHeight - 1; j++) {
+                // Get node values
+                double node1 = data[j * dataWidth + i];
+                double node2 = data[j * dataWidth + i + 1];
+                double node3 = data[(j + 1) * dataWidth + i + 1];
+                double node4 = data[(j + 1) * dataWidth + i];
+                
+                // Lower triangle point
+                double x_low = a + hx * (i + 2.0/3.0);
+                double y_low = c + hy * (j + 1.0/3.0);
+                double exact_low = func(x_low, y_low);
+                double approx_low = (node1 + node2 + node3) / 3.0;
+                double residual_low = std::fabs(exact_low - approx_low);
+                
+                // Upper triangle point
+                double x_up = a + hx * (i + 1.0/3.0);
+                double y_up = c + hy * (j + 2.0/3.0);
+                double exact_up = func(x_up, y_up);
+                double approx_up = (node1 + node3 + node4) / 3.0;
+                double residual_up = std::fabs(exact_up - approx_up);
+                
+                maxResidual = std::max(maxResidual, std::max(residual_low, residual_up));
+            }
+        }
+        
+        maxValue = maxResidual;
+    } else {
+        calculateMaxValue();
+    }
+    
     update();
 }
 

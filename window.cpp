@@ -211,6 +211,8 @@ void MainWindow::startComputation() {
         its, eps, k, 
         nx, ny, p);
     
+    renderer->setData(x, nx + 1, ny + 1);
+    
     updateInfoPanel();
 }
 
@@ -236,7 +238,15 @@ void MainWindow::toggleRenderMode() {
     }
     
     renderer->setRenderMode(paint_mode);
+    
+    // Force update if switching to residual mode
+    if (paint_mode == what_to_paint::residual) {
+        // This causes the residual to be recalculated
+        renderer->setData(x, nx + 1, ny + 1);
+    }
+    
     renderer->update();
+    updateInfoPanel();
 }
 
 void MainWindow::zoomIn() {
