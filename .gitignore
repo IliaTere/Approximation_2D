@@ -1,0 +1,7 @@
+moc_renderer.cpp
+moc_renderer.o
+moc_window.cpp
+moc_window.o
+*.o
+*.sh
+*.out
