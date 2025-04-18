@@ -1,6 +1,6 @@
 QT += core gui widgets
 
-TARGET = gui_app
+TARGET = a.out
 TEMPLATE = app
 CONFIG += console
 CONFIG += c++11
@@ -32,10 +32,7 @@ HEADERS += \
     window.hpp \
     renderer.hpp
 
-# Создаем также цель a.out (консольная версия)
-a_out.target = a.out
-a_out.commands = g++ main.cpp algorithm.cpp functions.cpp solution.cpp reduce_sum.cpp residual.cpp $(QMAKE_CXXFLAGS) -o a.out
-a_out.depends = main.cpp
+
 
 QMAKE_EXTRA_TARGETS += a_out
 
