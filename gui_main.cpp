@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
         
         QMessageBox::critical(nullptr, "Error", 
                              "Invalid number of arguments.\n\n"
-                             "Usage: gui_app a b c d nx ny mx my k epsilon max_iterations threads\n\n"
+                             "Usage: ./a.out a b c d nx ny mx my k epsilon max_iterations threads\n\n"
                              "Where:\n"
                              "a, b: boundaries in x\n"
                              "c, d: boundaries in y\n"

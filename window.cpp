@@ -3,9 +3,11 @@
 #include <QStatusBar>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QApplication>
 #include <cmath>
 #include <cstring>
 #include <sstream>
+#include <stdlib.h>  // For _exit()
 
 // Thread function prototype
 void* gui_solution(void* ptr);
@@ -81,6 +83,11 @@ MainWindow::~MainWindow() {
     dataReady.wakeAll();
     dataMutex.unlock();
     
+    // Make sure we join threads only if they were started
+    if (running && main_thread != 0) {
+        pthread_join(main_thread, nullptr);
+    }
+    
     for (int i = 1; i < p; ++i) {
         pthread_join(threads[i], nullptr);
     }
@@ -95,6 +102,9 @@ MainWindow::~MainWindow() {
     delete[] v;
     delete[] args;
     delete[] threads;
+    
+    // Let Qt handle the termination properly
+    // Don't use exit(0) here as it causes segmentation fault
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -145,6 +155,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         event->ignore();
     } else {
         event->accept();
+        _Exit(0);
     }
 }
 
@@ -174,7 +185,7 @@ void MainWindow::updateUI() {
         const int task = 6;
 
         printf(
-            "gui_app : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f\n"
+            "a.out : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f\n"
             "      It = %d E = %e K = %d Nx = %d Ny = %d P = %d\n",
             task, 
             r1, r2, r3, r4, 
