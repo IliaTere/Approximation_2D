@@ -35,6 +35,7 @@ struct Args{
     double res_3 = 0;
     double res_4 = 0;
     Status status = Status::success;
+    bool completed = false;
 };
 
 #endif // COMMON_TYPES_H 

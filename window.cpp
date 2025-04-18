@@ -31,7 +31,8 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     renderer->setRenderMode(paint_mode);
     
     infoLabel = new QLabel(this);
-    infoLabel->setStyleSheet("QLabel { color: #00008B; background-color: #F0F0F0; padding: 5px; }");
+    infoLabel->setStyleSheet("QLabel { color: #00008B; background-color: #F0F0F0; padding: 2px; font-size: 9px; }");
+    infoLabel->setMaximumHeight(20);
     
     QVBoxLayout *layout = new QVBoxLayout();
     layout->addWidget(renderer);
@@ -43,7 +44,7 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::updateUI);
-    timer->start(100); // Update every 100ms
+    timer->start(50); // Update every 50ms (more frequent updates)
     
     int n = (nx + 1) * (ny + 1);
     
@@ -148,6 +149,43 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::updateUI() {
+    // Update the info panel to show current status
+    updateInfoPanel();
+    
+    // Check if computation has completed
+    if (running && args[0].completed) {
+        // Join all threads
+        pthread_join(main_thread, nullptr);
+        
+        for (int i = 1; i < p; ++i) {
+            pthread_join(threads[i], nullptr);
+        }
+        
+        running = false;
+        
+        int its = args[0].its;
+        double r1 = args[0].res_1;
+        double r2 = args[0].res_2;
+        double r3 = args[0].res_3;
+        double r4 = args[0].res_4;
+        double t1 = args[0].t1;
+        double t2 = args[0].t2;
+
+        const int task = 6;
+
+        printf(
+            "gui_app : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f\n"
+            "      It = %d E = %e K = %d Nx = %d Ny = %d P = %d\n",
+            task, 
+            r1, r2, r3, r4, 
+            t1, t2, 
+            its, eps, k, 
+            nx, ny, p);
+        
+        renderer->setData(x, nx + 1, ny + 1);
+        updateInfoPanel(); // Update again after completion
+    }
+    
     if (!running) {
         renderer->setData(x, nx + 1, ny + 1);
         renderer->update();
@@ -156,6 +194,8 @@ void MainWindow::updateUI() {
 
 void MainWindow::startComputation() {
     running = true;
+    // Update immediately to show "Computing..." status
+    updateInfoPanel();
     
     for (int i = 0; i < p; ++i) {
         args[i].a = a;
@@ -176,44 +216,15 @@ void MainWindow::startComputation() {
         args[i].p = p;
         args[i].k = i;
         args[i].f = func.f;
+        args[i].completed = false;
     }
     
     for (int i = 1; i < p; ++i) {
         pthread_create(&threads[i], nullptr, &gui_solution, &args[i]);
     }
     
-    pthread_t main_thread;
+    // Start computation without waiting
     pthread_create(&main_thread, nullptr, &gui_solution, &args[0]);
-    pthread_join(main_thread, nullptr);
-    
-    for (int i = 1; i < p; ++i) {
-        pthread_join(threads[i], nullptr);
-    }
-    
-    running = false;
-    
-    int its = args[0].its;
-    double r1 = args[0].res_1;
-    double r2 = args[0].res_2;
-    double r3 = args[0].res_3;
-    double r4 = args[0].res_4;
-    double t1 = args[0].t1;
-    double t2 = args[0].t2;
-
-    const int task = 6;
-
-    printf(
-        "gui_app : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f\n"
-        "      It = %d E = %e K = %d Nx = %d Ny = %d P = %d\n",
-        task, 
-        r1, r2, r3, r4, 
-        t1, t2, 
-        its, eps, k, 
-        nx, ny, p);
-    
-    renderer->setData(x, nx + 1, ny + 1);
-    
-    updateInfoPanel();
 }
 
 void MainWindow::toggleFunction() {
@@ -225,6 +236,12 @@ void MainWindow::toggleFunction() {
 }
 
 void MainWindow::toggleRenderMode() {
+    // If computation is running, don't allow switching modes
+    if (running) {
+        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        return;
+    }
+    
     switch (paint_mode) {
         case what_to_paint::function:
             paint_mode = what_to_paint::approximation;
@@ -250,12 +267,22 @@ void MainWindow::toggleRenderMode() {
 }
 
 void MainWindow::zoomIn() {
+    if (running) {
+        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        return;
+    }
+    
     zoom_factor *= 2.0;
     renderer->setZoom(zoom_factor);
     updateInfoPanel();
 }
 
 void MainWindow::zoomOut() {
+    if (running) {
+        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        return;
+    }
+    
     zoom_factor = 1.0;
     renderer->setZoom(zoom_factor);
     updateInfoPanel();
@@ -352,12 +379,22 @@ void MainWindow::decreaseEpsilon() {
 }
 
 void MainWindow::increaseVisualizationDetail() {
+    if (running) {
+        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        return;
+    }
+    
     mx *= 2;
     my *= 2;
     updateInfoPanel();
 }
 
 void MainWindow::decreaseVisualizationDetail() {
+    if (running) {
+        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        return;
+    }
+    
     if (mx <= 5 || my <= 5) {
         QMessageBox::warning(this, "Warning", "Visualization detail cannot be less than 5.");
         return;
@@ -370,6 +407,13 @@ void MainWindow::decreaseVisualizationDetail() {
 
 void MainWindow::updateInfoPanel() {
     std::ostringstream oss;
+    
+    // Add computation status
+    if (running) {
+        oss << "[Производятся вычисления] ";
+    } else {
+        oss << "[Готов к работе] ";
+    }
     
     // Add function information
     oss << "Function: ";

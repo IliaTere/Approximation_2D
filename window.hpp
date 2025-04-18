@@ -55,6 +55,7 @@ private:
     
     // Multithreading
     pthread_t *threads;
+    pthread_t main_thread;  // Thread handle for main computation thread
     Args *args;
     QMutex dataMutex;
     QWaitCondition dataReady;

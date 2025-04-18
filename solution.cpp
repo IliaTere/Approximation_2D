@@ -44,5 +44,6 @@ void* solution(void* ptr) {
     args->res_4 = res_4;
 
     reduce_sum<int>(p);
+    args->completed = true;
     return nullptr;
 }
