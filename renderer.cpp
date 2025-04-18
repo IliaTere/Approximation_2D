@@ -62,6 +62,12 @@ void Renderer::setZoom(double factor, QPointF center) {
 
 void Renderer::setRenderMode(what_to_paint mode) {
     this->mode = mode;
+    
+    // For non-residual modes, recalculate the maxValue normally
+    if (mode != what_to_paint::residual && data && dataWidth > 0 && dataHeight > 0) {
+        calculateMaxValue();
+    }
+    
     update();
 }
 
@@ -316,45 +322,94 @@ void Renderer::drawResidual(QPainter &painter) {
         return;
     }
     
-    // Calculate maximum residual
+    double hx = (b - a) / (dataWidth - 1);
+    double hy = (d - c) / (dataHeight - 1);
     double maxResidual = 0.0;
     
-    for (int i = 0; i < dataWidth; i++) {
-        for (int j = 0; j < dataHeight; j++) {
-            double x = a + (b - a) * i / (dataWidth - 1);
-            double y = c + (d - c) * j / (dataHeight - 1);
+    // Calculate maximum residual
+    for (int i = 0; i < dataWidth - 1; i++) {
+        for (int j = 0; j < dataHeight - 1; j++) {
+            // Get node values
+            double node1 = data[j * dataWidth + i];
+            double node2 = data[j * dataWidth + i + 1];
+            double node3 = data[(j + 1) * dataWidth + i + 1];
+            double node4 = data[(j + 1) * dataWidth + i];
             
-            double exactVal = func(x, y);
-            double approxVal = data[j * dataWidth + i];
-            double residual = std::abs(exactVal - approxVal);
+            // Lower triangle point
+            double x_low = a + hx * (i + 2.0/3.0);
+            double y_low = c + hy * (j + 1.0/3.0);
             
-            maxResidual = std::max(maxResidual, residual);
+            // Calculate barycentric coordinates for lower triangle
+            double exact_low = func(x_low, y_low);
+            // Approximation using barycentric interpolation in lower triangle (nodes 1,2,3)
+            double approx_low = (node1 + node2 + node3) / 3.0;
+            double residual_low = std::fabs(exact_low - approx_low);
+            
+            // Upper triangle point
+            double x_up = a + hx * (i + 1.0/3.0);
+            double y_up = c + hy * (j + 2.0/3.0);
+            
+            // Calculate for upper triangle
+            double exact_up = func(x_up, y_up);
+            // Approximation using barycentric interpolation in upper triangle (nodes 1,3,4)
+            double approx_up = (node1 + node3 + node4) / 3.0;
+            double residual_up = std::fabs(exact_up - approx_up);
+            
+            maxResidual = std::max(maxResidual, std::max(residual_low, residual_up));
         }
     }
+    
+    // Update maxValue with the calculated maximum residual
+    maxValue = maxResidual;
     
     // Draw colored cells
     for (int i = 0; i < dataWidth - 1; i++) {
         for (int j = 0; j < dataHeight - 1; j++) {
-            double x = a + (b - a) * i / (dataWidth - 1);
-            double y = c + (d - c) * j / (dataHeight - 1);
+            // Get node values
+            double node1 = data[j * dataWidth + i];
+            double node2 = data[j * dataWidth + i + 1];
+            double node3 = data[(j + 1) * dataWidth + i + 1];
+            double node4 = data[(j + 1) * dataWidth + i];
             
-            double exactVal = func(x, y);
-            double approxVal = data[j * dataWidth + i];
-            double residual = std::abs(exactVal - approxVal);
+            // Lower triangle point
+            double x_low = a + hx * (i + 2.0/3.0);
+            double y_low = c + hy * (j + 1.0/3.0);
+            double exact_low = func(x_low, y_low);
+            // Approximation in lower triangle
+            double approx_low = (node1 + node2 + node3) / 3.0;
+            double residual_low = std::fabs(exact_low - approx_low);
             
-            QColor color = getColor(residual, 0.0, maxResidual);
+            QColor color = getColor(residual_low, 0.0, maxResidual);
             
-            QPointF p1 = l2g(a + (b - a) * i / (dataWidth - 1), c + (d - c) * j / (dataHeight - 1));
-            QPointF p2 = l2g(a + (b - a) * (i + 1) / (dataWidth - 1), c + (d - c) * j / (dataHeight - 1));
-            QPointF p3 = l2g(a + (b - a) * (i + 1) / (dataWidth - 1), c + (d - c) * (j + 1) / (dataHeight - 1));
-            QPointF p4 = l2g(a + (b - a) * i / (dataWidth - 1), c + (d - c) * (j + 1) / (dataHeight - 1));
+            QPointF p1 = l2g(a + hx * i, c + hy * j);
+            QPointF p2 = l2g(a + hx * (i + 1), c + hy * j);
+            QPointF p3 = l2g(a + hx * (i + 1), c + hy * (j + 1));
             
-            QPolygonF polygon;
-            polygon << p1 << p2 << p3 << p4;
+            QPolygonF triangle1;
+            triangle1 << p1 << p2 << p3;
             
             painter.setBrush(color);
-            painter.setPen(Qt::NoPen); // Убираем контур, чтобы не было видно линий сетки
-            painter.drawPolygon(polygon);
+            painter.setPen(Qt::NoPen);
+            painter.drawPolygon(triangle1);
+            
+            // Upper triangle point
+            double x_up = a + hx * (i + 1.0/3.0);
+            double y_up = c + hy * (j + 2.0/3.0);
+            double exact_up = func(x_up, y_up);
+            // Approximation in upper triangle
+            double approx_up = (node1 + node3 + node4) / 3.0;
+            double residual_up = std::fabs(exact_up - approx_up);
+            
+            QColor color2 = getColor(residual_up, 0.0, maxResidual);
+            
+            QPointF p4 = l2g(a + hx * i, c + hy * (j + 1));
+            
+            QPolygonF triangle2;
+            triangle2 << p1 << p3 << p4;
+            
+            painter.setBrush(color2);
+            painter.setPen(Qt::NoPen);
+            painter.drawPolygon(triangle2);
         }
     }
 }

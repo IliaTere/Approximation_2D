@@ -28,7 +28,7 @@ public:
     double getMaxValue() const;
     QPointF l2g(double x, double y) const;
     QPointF g2l(double x, double y) const;
-    QPointF g2l(double x, double y) const;
+    // QPointF g2l(double x, double y) const;
 
 protected:
     void paintEvent(QPaintEvent *event) override;

@@ -387,7 +387,11 @@ void MainWindow::updateInfoPanel() {
     oss << " | ε: " << eps;
     
     // Add max value information
-    oss << " | Max value: " << renderer->getMaxValue();
+    if (paint_mode == what_to_paint::residual) {
+        oss << " | Max residual: " << renderer->getMaxValue();
+    } else {
+        oss << " | Max value: " << renderer->getMaxValue();
+    }
     
     // Update label
     infoLabel->setText(oss.str().c_str());
