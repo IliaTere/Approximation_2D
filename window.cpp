@@ -19,40 +19,32 @@ MainWindow::MainWindow(double a, double b, double c, double d,
       zoom_factor(1.0), paint_mode(what_to_paint::function),
       running(false), terminating(false) {
           
-    // Set up the main window
     setWindowTitle("2D Function Approximation");
     setMinimumSize(100, 100);
     resize(1000, 1000);
     
-    // Initialize function
     func.select_f(k);
     
-    // Create renderer
     renderer = new Renderer(this);
     renderer->setBoundaries(a, b, c, d);
     renderer->setFunction(func.f);
     renderer->setRenderMode(paint_mode);
     
-    // Create info label
     infoLabel = new QLabel(this);
     infoLabel->setStyleSheet("QLabel { color: #00008B; background-color: #F0F0F0; padding: 5px; }");
     
-    // Set up layout
     QVBoxLayout *layout = new QVBoxLayout();
     layout->addWidget(renderer);
     layout->addWidget(infoLabel);
     
-    // Create central widget
     QWidget *centralWidget = new QWidget(this);
     centralWidget->setLayout(layout);
     setCentralWidget(centralWidget);
     
-    // Set up timer for UI updates
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::updateUI);
     timer->start(100); // Update every 100ms
     
-    // Allocate memory for computation
     int n = (nx + 1) * (ny + 1);
     
     I = nullptr;
@@ -72,33 +64,26 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     
     fill_I(nx, ny, I);
     
-    // Initialize solution vector with zeros
     memset(x, 0, n * sizeof(double));
     
-    // Allocate thread resources
     threads = new pthread_t[p];
     args = new Args[p];
     
-    // Start computation in separate threads
     startComputation();
     
-    // Update info panel
     updateInfoPanel();
 }
 
 MainWindow::~MainWindow() {
-    // Signal threads to terminate
     terminating = true;
     dataMutex.lock();
     dataReady.wakeAll();
     dataMutex.unlock();
     
-    // Wait for threads to finish
     for (int i = 1; i < p; ++i) {
         pthread_join(threads[i], nullptr);
     }
     
-    // Free memory
     free_results();
     delete[] I;
     delete[] A;
@@ -112,7 +97,6 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    // Don't process keys if computation is running
     if (running) {
         QMessageBox::information(this, "Information", "Please wait until computation is completed.");
         return;
@@ -165,7 +149,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 void MainWindow::updateUI() {
     if (!running) {
-        // Update renderer with current data
         renderer->setData(x, nx + 1, ny + 1);
         renderer->update();
     }
@@ -174,7 +157,6 @@ void MainWindow::updateUI() {
 void MainWindow::startComputation() {
     running = true;
     
-    // Initialize arguments for each thread
     for (int i = 0; i < p; ++i) {
         args[i].a = a;
         args[i].b = b;
@@ -196,24 +178,20 @@ void MainWindow::startComputation() {
         args[i].f = func.f;
     }
     
-    // Start threads
     for (int i = 1; i < p; ++i) {
         pthread_create(&threads[i], nullptr, &gui_solution, &args[i]);
     }
     
-    // Create a separate thread for the main thread's computation
     pthread_t main_thread;
     pthread_create(&main_thread, nullptr, &gui_solution, &args[0]);
     pthread_join(main_thread, nullptr);
     
-    // Join other threads
     for (int i = 1; i < p; ++i) {
         pthread_join(threads[i], nullptr);
     }
     
     running = false;
     
-    // Get results from computation
     int its = args[0].its;
     double r1 = args[0].res_1;
     double r2 = args[0].res_2;
@@ -222,7 +200,6 @@ void MainWindow::startComputation() {
     double t1 = args[0].t1;
     double t2 = args[0].t2;
 
-    // Print results to terminal in the required format
     const int task = 6;
 
     printf(
@@ -234,7 +211,6 @@ void MainWindow::startComputation() {
         its, eps, k, 
         nx, ny, p);
     
-    // Update info panel
     updateInfoPanel();
 }
 
@@ -243,7 +219,6 @@ void MainWindow::toggleFunction() {
     func.select_f(k);
     renderer->setFunction(func.f);
     
-    // Restart computation with new function
     startComputation();
 }
 
@@ -280,10 +255,8 @@ void MainWindow::increaseGridDimension() {
     nx *= 2;
     ny *= 2;
     
-    // Reallocate memory for computation
     int n = (nx + 1) * (ny + 1);
     
-    // Free old memory
     delete[] I;
     delete[] A;
     delete[] B;
@@ -292,7 +265,6 @@ void MainWindow::increaseGridDimension() {
     delete[] u;
     delete[] v;
     
-    // Allocate new memory
     I = nullptr;
     if (allocate_msr_matrix(nx, ny, &A, &I)) {
         QMessageBox::critical(this, "Error", "Failed to allocate MSR matrix.");
@@ -352,24 +324,20 @@ void MainWindow::decreaseGridDimension() {
     
     fill_I(nx, ny, I);
     
-    // Initialize solution vector with zeros
     memset(x, 0, n * sizeof(double));
     
-    // Restart computation
     startComputation();
 }
 
 void MainWindow::increaseEpsilon() {
     eps *= 10.0;
     
-    // Restart computation
     startComputation();
 }
 
 void MainWindow::decreaseEpsilon() {
     eps /= 10.0;
     
-    // Restart computation
     startComputation();
 }
 

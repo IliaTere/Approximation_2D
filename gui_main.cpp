@@ -7,18 +7,14 @@
 #include "window.hpp"
 
 int main(int argc, char *argv[]) {
-    // Enable floating point exceptions
     feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
     
-    // Create Qt application
     QApplication app(argc, argv);
     
-    // Parse command line arguments
     if (argc != 13) {
         std::cerr << "Error: Expected 12 command-line arguments." << std::endl;
         std::cerr << "Usage: " << argv[0] << " a b c d nx ny mx my k epsilon max_iterations threads" << std::endl;
         
-        // Show error message box in GUI
         QMessageBox::critical(nullptr, "Error", 
                              "Invalid number of arguments.\n\n"
                              "Usage: gui_app a b c d nx ny mx my k epsilon max_iterations threads\n\n"
@@ -53,14 +49,12 @@ int main(int argc, char *argv[]) {
     } catch (const std::invalid_argument& e) {
         std::cerr << "Error: Invalid argument format. All parameters must be valid numbers." << std::endl;
         
-        // Show error message box in GUI
         QMessageBox::critical(nullptr, "Error", 
                              "Invalid argument format. All parameters must be valid numbers.");
         return 1;
     } catch (const std::out_of_range& e) {
         std::cerr << "Error: Number out of range." << std::endl;
         
-        // Show error message box in GUI
         QMessageBox::critical(nullptr, "Error", "Number out of range.");
         return 1;
     }

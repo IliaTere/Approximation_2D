@@ -27,7 +27,6 @@ void* solution(void* ptr) {
 
     int maxsteps = 300; // гиперпараметр
     args->t1 = get_cpu_time();
-    // Использование метода минимальных ошибок с блочным симметричным предобуславливателем Зейделя
     int its = minimal_errors_msr_matrix_full(N, A, I, B, x, r, u, v, eps, maxit, maxsteps, p, k);  
     args->t1 = get_cpu_time() - args->t1;
     args->its = its;

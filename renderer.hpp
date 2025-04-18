@@ -25,13 +25,9 @@ public:
     void setFunction(double (*f)(double, double));
     void setApproximation(double *approx, int width, int height);
     
-    // Get information
     double getMaxValue() const;
-    
-    // Convert logical to graphic coordinates
     QPointF l2g(double x, double y) const;
-    
-    // Convert graphic to logical coordinates
+    QPointF g2l(double x, double y) const;
     QPointF g2l(double x, double y) const;
 
 protected:

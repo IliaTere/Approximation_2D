@@ -110,7 +110,7 @@ void Renderer::paintEvent(QPaintEvent *event) {
     // Fill background
     painter.fillRect(event->rect(), QColor("#F0F0F0"));
     
-    // Draw grid
+    // Draw grid but grid drawing is disabled
     drawGrid(painter);
     
     // Draw data based on mode
@@ -221,6 +221,11 @@ QColor Renderer::getColor(double value, double min, double max) {
 }
 
 void Renderer::drawGrid(QPainter &painter) {
+    // This method is intentionally left empty to disable grid drawing
+    return; // Не рисуем сетку
+    
+    // Код ниже не будет выполняться
+    
     // Set pen for grid lines
     QPen gridPen(QColor("#C0C0C0"));
     gridPen.setWidth(1);
@@ -300,6 +305,7 @@ void Renderer::drawData(QPainter &painter) {
             polygon << p1 << p2 << p3 << p4;
             
             painter.setBrush(color);
+            painter.setPen(Qt::NoPen); // Убираем контур, чтобы не было видно линий сетки
             painter.drawPolygon(polygon);
         }
     }
@@ -347,6 +353,7 @@ void Renderer::drawResidual(QPainter &painter) {
             polygon << p1 << p2 << p3 << p4;
             
             painter.setBrush(color);
+            painter.setPen(Qt::NoPen); // Убираем контур, чтобы не было видно линий сетки
             painter.drawPolygon(polygon);
         }
     }
@@ -394,6 +401,7 @@ void Renderer::drawFunction(QPainter &painter) {
             polygon << p1 << p2 << p3 << p4;
             
             painter.setBrush(color);
+            painter.setPen(Qt::NoPen); // Убираем контур, чтобы не было видно линий сетки
             painter.drawPolygon(polygon);
         }
     }
