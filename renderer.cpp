@@ -216,8 +216,13 @@ void Renderer::setupGradients() {
 }
 
 QColor Renderer::getColor(double value, double min, double max) {
-    // Normalize value between 0 and 1
-    double normalizedValue = (value - min) / (max - min);
+    double d;
+    if (std::fabs(max-min) < 1e-16) {
+        d = 1e-16;
+    } else {
+        d = max - min;
+    }
+    double normalizedValue = (value - min) / d;
     normalizedValue = qBound(0.0, normalizedValue, 1.0);
     
     // Choose appropriate gradient based on mode

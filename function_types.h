@@ -3,7 +3,7 @@
 
 #include "common_types.h"
 
-double F_IJ(int nx, int ny, double hx, double hy, double a, double с, int i, int j, double (*f)(double, double));
+double F_IJ(int nx, int ny, double hx, double hy, double a, double c, int i, int j, double (*f)(double, double));
 void fill_B(int nx, int ny, double hx, double hy, double a, double c, double* B, double (*f)(double, double), int p, int k);
 double f_0(double, double);
 double f_1(double x, double);

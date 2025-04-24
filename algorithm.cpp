@@ -4,7 +4,7 @@
 #define FUNC(I, J) do { ij2l(nx, ny, I, J, k); if (I_ij) { I_ij[m] = k; } m++; } \
                   while (0)
 
-#define F(I, J) (f(a + (I)*hx, с + (J)*hy))
+#define F(I, J) (f(a + (I)*hx, c + (J)*hy))
 
 void matrix_mult_vector_msr(int n, double* A, int* I, double* x, double* y, int p, int k) {
     int i, i1, i2, l, J; double s;
@@ -369,7 +369,7 @@ int check_symm(int nx, int ny, int* I, double* A, double eps, int p, int k) {
     return symmetryErrors;
 }
 
-double F_IJ(int nx, int ny, double hx, double hy, double a, double с, int i, int j, double (*f)(double, double)) {
+double F_IJ(int nx, int ny, double hx, double hy, double a, double c, int i, int j, double (*f)(double, double)) {
     const double quadWeight = hx * hy / 192.0;
     
     enum NodeType {
