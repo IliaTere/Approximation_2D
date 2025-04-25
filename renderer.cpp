@@ -676,13 +676,21 @@ void Renderer::drawResidual(QPainter &painter) {
             // Цвет для этой ячейки
             QColor color = getColor(residualMatrix[i][j], 0.0, maxResidual);
             
-            // Рисуем квадрат
-            QPolygonF quad;
-            quad << p1 << p2 << p3 << p4;
+            // Рисуем нижний треугольник (1,2,3)
+            QPolygonF triangle_low;
+            triangle_low << p1 << p2 << p3;
             
             painter.setBrush(color);
             painter.setPen(Qt::NoPen);
-            painter.drawPolygon(quad);
+            painter.drawPolygon(triangle_low);
+            
+            // Рисуем верхний треугольник (1,3,4)
+            QPolygonF triangle_up;
+            triangle_up << p1 << p3 << p4;
+            
+            painter.setBrush(color);
+            painter.setPen(Qt::NoPen);
+            painter.drawPolygon(triangle_up);
         }
     }
 }
