@@ -31,6 +31,7 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     renderer->setBoundaries(a, b, c, d);
     renderer->setFunction(func.f);
     renderer->setRenderMode(paint_mode);
+    renderer->setVisualizationDetail(mx, my);
     
     // Создание и настройка информационной панели
     infoLabel = new QLabel(this);
@@ -425,28 +426,36 @@ void MainWindow::decreaseEpsilon() {
 
 void MainWindow::increaseVisualizationDetail() {
     if (running) {
-        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        QMessageBox::information(this, "Информация", "Пожалуйста, дождитесь завершения вычислений.");
         return;
     }
     
     mx *= 2;
     my *= 2;
+    
+    // Обновляем детализацию в renderer
+    renderer->setVisualizationDetail(mx, my);
+    
     updateInfoPanel();
 }
 
 void MainWindow::decreaseVisualizationDetail() {
     if (running) {
-        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        QMessageBox::information(this, "Информация", "Пожалуйста, дождитесь завершения вычислений.");
         return;
     }
     
     if (mx <= 5 || my <= 5) {
-        QMessageBox::warning(this, "Warning", "Visualization detail cannot be less than 5.");
+        QMessageBox::warning(this, "Предупреждение", "Детализация визуализации не может быть меньше 5.");
         return;
     }
     
     mx /= 2;
     my /= 2;
+    
+    // Обновляем детализацию в renderer
+    renderer->setVisualizationDetail(mx, my);
+    
     updateInfoPanel();
 }
 

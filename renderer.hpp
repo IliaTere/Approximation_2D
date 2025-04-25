@@ -24,6 +24,7 @@ public:
     void setRenderMode(what_to_paint mode);
     void setFunction(double (*f)(double, double));
     void setApproximation(double *approx, int width, int height);
+    void setVisualizationDetail(int mx, int my);
     
     double getMaxValue() const;
     QPointF l2g(double x, double y) const;
@@ -39,6 +40,8 @@ private:
     double *data;                // Data to visualize
     double *approximation;       // Approximation data
     int dataWidth, dataHeight;   // Dimensions of data
+    int visualizationWidth;      // Visualization grid width
+    int visualizationHeight;     // Visualization grid height
     double maxValue;             // Maximum value for scaling
     
     // Boundaries
