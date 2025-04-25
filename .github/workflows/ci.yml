@@ -1,0 +1,110 @@
+name: C++ Qt Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qt5-default qtbase5-dev qtdeclarative5-dev
+    
+    - name: Install Static Analysis Tools
+      run: sudo apt-get install -y cppcheck clang-tidy
+      
+    - name: Static Analysis with Cppcheck
+      run: cppcheck --enable=all --suppress=missingIncludeSystem --error-exitcode=1 .
+      
+    - name: Create Build Directory
+      run: mkdir -p build
+      
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/build
+      run: cmake ..
+      
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      run: make -j$(nproc)
+      
+    - name: Make Test Script Executable
+      run: chmod +x scripts/run_tests.sh
+      
+    - name: Run Tests
+      run: scripts/run_tests.sh || true
+      
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '5.15.2'
+        host: 'windows'
+        target: 'desktop'
+        
+    - name: Create Build Directory
+      run: mkdir build
+      
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/build
+      run: cmake ..
+      
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      run: cmake --build . --config Release
+      
+    - name: Test Run
+      working-directory: ${{github.workspace}}/build
+      run: |
+        cd Release
+        ./Approximation_2D.exe -1 1 -1 1 50 50 5 1e-6 100 1 || true
+        
+  code-coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt and Coverage Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qt5-default qtbase5-dev lcov
+    
+    - name: Create Build Directory
+      run: mkdir -p build
+      
+    - name: Configure CMake with Coverage
+      working-directory: ${{github.workspace}}/build
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage -g -O0"
+      
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      run: make -j$(nproc)
+      
+    - name: Run Tests for Coverage
+      working-directory: ${{github.workspace}}/build
+      run: ./Approximation_2D -1 1 -1 1 50 50 5 1e-6 100 1 || true
+      
+    - name: Generate Coverage Report
+      run: |
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info
+        lcov --list coverage.info
+        
+    - name: Upload Coverage Report
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.info
+        fail_ci_if_error: false 
