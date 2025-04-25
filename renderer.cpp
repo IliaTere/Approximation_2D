@@ -224,10 +224,10 @@ void Renderer::setupGradients() {
 QColor Renderer::getColor(double value, double min, double max) {
     double d;
     // Если диапазон значений очень мал (константная функция), используем искусственный разброс
-    if (std::fabs(max-min) < 1e-6) {
+    if (std::fabs(max-min) < 1e-16) {
         // Для константных функций создаем искусственный градиент
         // Проверка: если значение близко к 1, это вероятно функция f(x,y) = 1
-        bool isConstantOne = (std::fabs(value - 1.0) < 1e-6);
+        bool isConstantOne = (std::fabs(value - 1.0) < 1e-16);
         
         if (mode == what_to_paint::function) {
             if (isConstantOne) {
@@ -258,7 +258,7 @@ QColor Renderer::getColor(double value, double min, double max) {
             max = 1.0;
             value = 0.0; // Начало градиента (зеленый для минимальной погрешности)
         }
-        d = 1.0;
+        d = 1e-16;
     } else {
         d = max - min;
     }
