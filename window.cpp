@@ -32,21 +32,38 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     renderer->setFunction(func.f);
     renderer->setRenderMode(paint_mode);
     
+    // Создание и настройка информационной панели
     infoLabel = new QLabel(this);
-    infoLabel->setStyleSheet("QLabel { color: #00008B; background-color: #F0F0F0; padding: 2px; font-size: 9px; }");
-    infoLabel->setMaximumHeight(20);
+    infoLabel->setStyleSheet(
+        "QLabel { "
+        "  color: #003366; "
+        "  background-color: #E0E0F0; "
+        "  border: 1px solid #8080A0; "
+        "  border-radius: 2px; "
+        "  padding: 2px 4px; "
+        "  font-size: 11px; "
+        "  font-weight: bold; "
+        "  font-family: 'Segoe UI', sans-serif; "
+        "}"
+    );
+    infoLabel->setMinimumHeight(24);
+    infoLabel->setMaximumHeight(24);
+    infoLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     
     QVBoxLayout *layout = new QVBoxLayout();
     layout->addWidget(renderer);
     layout->addWidget(infoLabel);
+    layout->setContentsMargins(5, 5, 5, 5);
+    layout->setSpacing(5);
     
     QWidget *centralWidget = new QWidget(this);
     centralWidget->setLayout(layout);
     setCentralWidget(centralWidget);
     
+    // Создание и запуск таймера обновления
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::updateUI);
-    timer->start(50); // Update every 50ms (more frequent updates)
+    timer->start(50); // Обновление каждые 50мс (более частые обновления)
     
     int n = (nx + 1) * (ny + 1);
     
@@ -108,41 +125,58 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
+    // Если сейчас выполняются вычисления, блокируем все команды
     if (running) {
-        QMessageBox::information(this, "Information", "Please wait until computation is completed.");
+        QMessageBox::information(this, "Информация", "Пожалуйста, дождитесь завершения вычислений.");
         return;
     }
     
+    // Обработка нажатий клавиш
     switch (event->key()) {
         case Qt::Key_0:
+            // Переключение на следующую функцию (циклически 0..7)
             toggleFunction();
             break;
         case Qt::Key_1:
+            // Циклическое переключение режимов отображения (функция → аппроксимация → остаток)
             toggleRenderMode();
             break;
         case Qt::Key_2:
+            // Увеличение масштаба (приближение)
             zoomIn();
             break;
         case Qt::Key_3:
+            // Уменьшение масштаба (отдаление)
             zoomOut();
             break;
         case Qt::Key_4:
+            // Увеличение размерности расчетной сетки (nx, ny) в 2 раза
             increaseGridDimension();
             break;
         case Qt::Key_5:
+            // Уменьшение размерности расчетной сетки (nx, ny) в 2 раза (не менее 5)
             decreaseGridDimension();
             break;
         case Qt::Key_6:
+            // Увеличение параметра погрешности
             increaseEpsilon();
             break;
         case Qt::Key_7:
+            // Уменьшение параметра погрешности
             decreaseEpsilon();
             break;
         case Qt::Key_8:
+            // Увеличение детализации визуализации (mx, my) в 2 раза
             increaseVisualizationDetail();
             break;
         case Qt::Key_9:
+            // Уменьшение детализации визуализации (mx, my) в 2 раза (не менее 5)
             decreaseVisualizationDetail();
+            break;
+        case Qt::Key_H:
+        case Qt::Key_F1:
+            // Показать справку по командам
+            showHelp();
             break;
         default:
             QMainWindow::keyPressEvent(event);
@@ -419,46 +453,50 @@ void MainWindow::decreaseVisualizationDetail() {
 void MainWindow::updateInfoPanel() {
     std::ostringstream oss;
     
-    // Add computation status
+    // Информация о режиме и функции
     if (running) {
-        oss << "[Производятся вычисления] ";
+        oss << "⟳ Вычисление... | ";
     } else {
-        oss << "[Готов к работе] ";
+        switch (paint_mode) {
+            case what_to_paint::function: oss << "Функция"; break;
+            case what_to_paint::approximation: oss << "Аппрокс."; break;
+            case what_to_paint::residual: oss << "Погреш."; break;
+        }
+        oss << " | ";
     }
     
-    // Add function information
-    oss << "Function: ";
+    // Формула функции
+    oss << "f" << k << ": ";
     switch (k) {
-        case 0: oss << "f(x,y) = 1"; break;
-        case 1: oss << "f(x,y) = x"; break;
-        case 2: oss << "f(x,y) = y"; break;
-        case 3: oss << "f(x,y) = x + y"; break;
-        case 4: oss << "f(x,y) = sqrt(x² + y²)"; break;
-        case 5: oss << "f(x,y) = x² + y²"; break;
-        case 6: oss << "f(x,y) = exp(x² - y²)"; break;
-        case 7: oss << "f(x,y) = 1/(25(x² + y²) + 1)"; break;
+        case 0: oss << "1"; break;
+        case 1: oss << "x"; break;
+        case 2: oss << "y"; break;
+        case 3: oss << "x+y"; break;
+        case 4: oss << "√(x²+y²)"; break;
+        case 5: oss << "x²+y²"; break;
+        case 6: oss << "e^(x²-y²)"; break;
+        case 7: oss << "1/(25(x²+y²)+1)"; break;
     }
     
-    // Add grid information
-    oss << " | Grid: " << nx << "x" << ny;
+    // Сетка, масштаб, точность
+    oss << " | Сетка:" << nx << "×" << ny 
+        << " | Виз:" << mx << "×" << my
+        << " | Обл:[" << a << "," << b << "]×[" << c << "," << d << "]"
+        << " | М:" << zoom_factor << "×"
+        << " | ε:" << eps
+        << " | П:" << p;
     
-    // Add visualization detail
-    oss << " | Viz: " << mx << "x" << my;
-    
-    // Add zoom information
-    oss << " | Zoom: " << zoom_factor << "x";
-    
-    // Add epsilon information
-    oss << " | ε: " << eps;
-    
-    // Add max value information
+    // Максимальное значение
     if (paint_mode == what_to_paint::residual) {
-        oss << " | Max residual: " << renderer->getMaxValue();
+        oss << " | Макс.Δ:" << renderer->getMaxValue();
     } else {
-        oss << " | Max value: " << renderer->getMaxValue();
+        oss << " | Макс:" << renderer->getMaxValue();
     }
     
-    // Update label
+    // Краткая справка по клавишам
+    oss << " | F1-помощь";
+    
+    // Обновление текста
     infoLabel->setText(oss.str().c_str());
 }
 
@@ -469,4 +507,29 @@ QPointF MainWindow::l2g(double x, double y) {
 // Thread function implementation
 void* gui_solution(void* ptr) {
     return solution(ptr);
+}
+
+// Новый метод для отображения справки
+void MainWindow::showHelp() {
+    QString helpText = 
+        "Справка по клавиатурным командам:\n\n"
+        "0 - переключение на следующую функцию (циклически 0..7)\n"
+        "1 - циклическое переключение режимов отображения (функция → аппроксимация → остаток)\n"
+        "2 - увеличение масштаба (приближение)\n"
+        "3 - уменьшение масштаба (отдаление)\n"
+        "4 - увеличение размерности расчетной сетки (nx, ny) в 2 раза\n"
+        "5 - уменьшение размерности расчетной сетки (nx, ny) в 2 раза (не менее 5)\n"
+        "6 - увеличение параметра погрешности\n"
+        "7 - уменьшение параметра погрешности\n"
+        "8 - увеличение детализации визуализации (mx, my) в 2 раза\n"
+        "9 - уменьшение детализации визуализации (mx, my) в 2 раза (не менее 5)\n"
+        "H или F1 - показать эту справку\n\n"
+        "Текущие параметры:\n"
+        "Функция: " + QString::number(k) + "\n"
+        "Расчетная сетка: " + QString::number(nx) + "×" + QString::number(ny) + "\n"
+        "Визуализация: " + QString::number(mx) + "×" + QString::number(my) + "\n"
+        "Точность ε: " + QString::number(eps) + "\n"
+        "Масштаб: " + QString::number(zoom_factor) + "×";
+    
+    QMessageBox::information(this, "Справка по командам", helpText);
 } 

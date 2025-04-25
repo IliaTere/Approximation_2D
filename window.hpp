@@ -84,6 +84,7 @@ private:
     void increaseVisualizationDetail();
     void decreaseVisualizationDetail();
     void updateInfoPanel();
+    void showHelp();        // Метод для отображения справки по командам
     
     // Logical to graphical coordinate conversion
     QPointF l2g(double x, double y);

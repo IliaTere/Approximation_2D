@@ -192,27 +192,31 @@ void Renderer::updateVisibleRect() {
 }
 
 void Renderer::setupGradients() {
-    // Standard gradient (blue-green-red)
+    // Standard gradient (синий - голубой - зеленый - желтый - красный)
     standardGradient.setStart(0, 0);
     standardGradient.setFinalStop(1, 0);
     standardGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-    standardGradient.setColorAt(0.0, QColor("#0000FF")); // Blue
-    standardGradient.setColorAt(0.5, QColor("#00FF00")); // Green
-    standardGradient.setColorAt(1.0, QColor("#FF0000")); // Red
+    standardGradient.setColorAt(0.0, QColor("#0000FF")); // Синий
+    standardGradient.setColorAt(0.25, QColor("#00AAFF")); // Голубой
+    standardGradient.setColorAt(0.5, QColor("#00FF00")); // Зеленый
+    standardGradient.setColorAt(0.75, QColor("#FFFF00")); // Желтый
+    standardGradient.setColorAt(1.0, QColor("#FF0000")); // Красный
     
-    // Residual gradient (green-purple)
+    // Residual gradient (зеленый - желтый - оранжевый - красный)
     residualGradient.setStart(0, 0);
     residualGradient.setFinalStop(1, 0);
     residualGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-    residualGradient.setColorAt(0.0, QColor("#00FF00")); // Green
-    residualGradient.setColorAt(1.0, QColor("#8B00FF")); // Purple
+    residualGradient.setColorAt(0.0, QColor("#00AA00")); // Зеленый (минимальная погрешность)
+    residualGradient.setColorAt(0.3, QColor("#AAFF00")); // Светло-зеленый
+    residualGradient.setColorAt(0.6, QColor("#FFAA00")); // Оранжевый
+    residualGradient.setColorAt(1.0, QColor("#FF0000")); // Красный (максимальная погрешность)
     
-    // Approximation gradient (cyan-orange)
+    // Approximation gradient (сохраняем, но не используем)
     approximationGradient.setStart(0, 0);
     approximationGradient.setFinalStop(1, 0);
     approximationGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
-    approximationGradient.setColorAt(0.0, QColor("#00FFFF")); // Cyan
-    approximationGradient.setColorAt(1.0, QColor("#FFA500")); // Orange
+    approximationGradient.setColorAt(0.0, QColor("#00FFFF")); // Голубой
+    approximationGradient.setColorAt(1.0, QColor("#FFA500")); // Оранжевый
 }
 
 QColor Renderer::getColor(double value, double min, double max) {
@@ -229,10 +233,8 @@ QColor Renderer::getColor(double value, double min, double max) {
     QLinearGradient *gradient;
     switch (mode) {
         case what_to_paint::function:
+        case what_to_paint::approximation:  // Используем один и тот же градиент для функции и аппроксимации
             gradient = &standardGradient;
-            break;
-        case what_to_paint::approximation:
-            gradient = &approximationGradient;
             break;
         case what_to_paint::residual:
             gradient = &residualGradient;
@@ -369,32 +371,30 @@ void Renderer::drawResidual(QPainter &painter) {
     double hy = (d - c) / (dataHeight - 1);
     double maxResidual = 0.0;
     
-    // Calculate maximum residual
+    // Расчет максимальной погрешности по ТЗ
     for (int i = 0; i < dataWidth - 1; i++) {
         for (int j = 0; j < dataHeight - 1; j++) {
-            // Get node values
-            double node1 = data[j * dataWidth + i];
-            double node2 = data[j * dataWidth + i + 1];
-            double node3 = data[(j + 1) * dataWidth + i + 1];
-            double node4 = data[(j + 1) * dataWidth + i];
+            // Получение значений в узлах
+            double node1 = data[j * dataWidth + i]; // (i,j)
+            double node2 = data[j * dataWidth + i + 1]; // (i+1,j)
+            double node3 = data[(j + 1) * dataWidth + i + 1]; // (i+1,j+1)
+            double node4 = data[(j + 1) * dataWidth + i]; // (i,j+1)
             
-            // Lower triangle point
+            // Нижний треугольник - точка с координатами (i+2/3, j+1/3)
             double x_low = a + hx * (i + 2.0/3.0);
             double y_low = c + hy * (j + 1.0/3.0);
-            
-            // Calculate barycentric coordinates for lower triangle
             double exact_low = func(x_low, y_low);
-            // Approximation using barycentric interpolation in lower triangle (nodes 1,2,3)
+            
+            // Линейная интерполяция для нижнего треугольника
             double approx_low = (node1 + node2 + node3) / 3.0;
             double residual_low = std::fabs(exact_low - approx_low);
             
-            // Upper triangle point
+            // Верхний треугольник - точка с координатами (i+1/3, j+2/3)
             double x_up = a + hx * (i + 1.0/3.0);
             double y_up = c + hy * (j + 2.0/3.0);
-            
-            // Calculate for upper triangle
             double exact_up = func(x_up, y_up);
-            // Approximation using barycentric interpolation in upper triangle (nodes 1,3,4)
+            
+            // Линейная интерполяция для верхнего треугольника
             double approx_up = (node1 + node3 + node4) / 3.0;
             double residual_up = std::fabs(exact_up - approx_up);
             
@@ -402,57 +402,57 @@ void Renderer::drawResidual(QPainter &painter) {
         }
     }
     
-    // Update maxValue with the calculated maximum residual
+    // Обновление максимального значения погрешности
     maxValue = maxResidual;
     
-    // Draw colored cells
+    // Отрисовка треугольников
     for (int i = 0; i < dataWidth - 1; i++) {
         for (int j = 0; j < dataHeight - 1; j++) {
-            // Get node values
+            // Получение значений в узлах
             double node1 = data[j * dataWidth + i];
             double node2 = data[j * dataWidth + i + 1];
             double node3 = data[(j + 1) * dataWidth + i + 1];
             double node4 = data[(j + 1) * dataWidth + i];
             
-            // Lower triangle point
+            // Координаты точек сетки
+            QPointF p1 = l2g(a + hx * i, c + hy * j);          // Левый нижний угол
+            QPointF p2 = l2g(a + hx * (i + 1), c + hy * j);    // Правый нижний угол
+            QPointF p3 = l2g(a + hx * (i + 1), c + hy * (j + 1)); // Правый верхний угол
+            QPointF p4 = l2g(a + hx * i, c + hy * (j + 1));    // Левый верхний угол
+            
+            // Нижний треугольник - точка (i+2/3, j+1/3)
             double x_low = a + hx * (i + 2.0/3.0);
             double y_low = c + hy * (j + 1.0/3.0);
             double exact_low = func(x_low, y_low);
-            // Approximation in lower triangle
             double approx_low = (node1 + node2 + node3) / 3.0;
             double residual_low = std::fabs(exact_low - approx_low);
             
-            QColor color = getColor(residual_low, 0.0, maxResidual);
+            QColor color_low = getColor(residual_low, 0.0, maxResidual);
             
-            QPointF p1 = l2g(a + hx * i, c + hy * j);
-            QPointF p2 = l2g(a + hx * (i + 1), c + hy * j);
-            QPointF p3 = l2g(a + hx * (i + 1), c + hy * (j + 1));
+            // Рисуем нижний треугольник (1,2,3)
+            QPolygonF triangle_low;
+            triangle_low << p1 << p2 << p3;
             
-            QPolygonF triangle1;
-            triangle1 << p1 << p2 << p3;
-            
-            painter.setBrush(color);
+            painter.setBrush(color_low);
             painter.setPen(Qt::NoPen);
-            painter.drawPolygon(triangle1);
+            painter.drawPolygon(triangle_low);
             
-            // Upper triangle point
+            // Верхний треугольник - точка (i+1/3, j+2/3)
             double x_up = a + hx * (i + 1.0/3.0);
             double y_up = c + hy * (j + 2.0/3.0);
             double exact_up = func(x_up, y_up);
-            // Approximation in upper triangle
             double approx_up = (node1 + node3 + node4) / 3.0;
             double residual_up = std::fabs(exact_up - approx_up);
             
-            QColor color2 = getColor(residual_up, 0.0, maxResidual);
+            QColor color_up = getColor(residual_up, 0.0, maxResidual);
             
-            QPointF p4 = l2g(a + hx * i, c + hy * (j + 1));
+            // Рисуем верхний треугольник (1,3,4)
+            QPolygonF triangle_up;
+            triangle_up << p1 << p3 << p4;
             
-            QPolygonF triangle2;
-            triangle2 << p1 << p3 << p4;
-            
-            painter.setBrush(color2);
+            painter.setBrush(color_up);
             painter.setPen(Qt::NoPen);
-            painter.drawPolygon(triangle2);
+            painter.drawPolygon(triangle_up);
         }
     }
 }
