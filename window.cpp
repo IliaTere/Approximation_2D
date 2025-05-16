@@ -96,10 +96,11 @@ MainWindow::MainWindow(double a, double b, double c, double d,
 }
 
 MainWindow::~MainWindow() {
-    terminating = true;
-    dataMutex.lock();
-    dataReady.wakeAll();
-    dataMutex.unlock();
+    {
+        QMutexLocker locker(&dataMutex);
+        terminating = true;
+        dataReady.wakeAll();
+    }
     
     // Make sure we join threads only if they were started
     if (running && main_thread != 0) {
@@ -107,7 +108,9 @@ MainWindow::~MainWindow() {
     }
     
     for (int i = 1; i < p; ++i) {
-        pthread_join(threads[i], nullptr);
+        if (threads[i] != 0) {
+            pthread_join(threads[i], nullptr);
+        }
     }
     
     free_results();
@@ -120,9 +123,6 @@ MainWindow::~MainWindow() {
     delete[] v;
     delete[] args;
     delete[] threads;
-    
-    // Let Qt handle the termination properly
-    // Don't use exit(0) here as it causes segmentation fault
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -195,6 +195,9 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::updateUI() {
+    // Lock mutex before accessing shared data
+    QMutexLocker locker(&dataMutex);
+    
     // Update the info panel to show current status
     updateInfoPanel();
     
@@ -239,6 +242,7 @@ void MainWindow::updateUI() {
 }
 
 void MainWindow::startComputation() {
+    QMutexLocker locker(&dataMutex);
     running = true;
     // Update immediately to show "Computing..." status
     updateInfoPanel();
