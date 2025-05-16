@@ -87,6 +87,8 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     
     memset(x, 0, n * sizeof(double));
     
+    renderer->setData(x, nx + 1, ny + 1);
+    
     threads = new pthread_t[p];
     args = new Args[p];
     
@@ -370,6 +372,8 @@ void MainWindow::increaseGridDimension() {
     // Initialize solution vector with zeros
     memset(x, 0, n * sizeof(double));
     
+    renderer->setData(x, nx + 1, ny + 1);
+    
     // Restart computation
     startComputation();
 }
@@ -412,6 +416,8 @@ void MainWindow::decreaseGridDimension() {
     fill_I(nx, ny, I);
     
     memset(x, 0, n * sizeof(double));
+    
+    renderer->setData(x, nx + 1, ny + 1);
     
     startComputation();
 }

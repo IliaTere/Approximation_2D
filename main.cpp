@@ -11,7 +11,6 @@ int main(int argc, char* argv[]) {
     
     
     if (argc != 11) {
-        std::cerr << "Error: Expected 10 command-line arguments." << std::endl;
         std::cerr << "Usage: " << argv[0] << " a b c d nx ny k epsilon max_iterations threads" << std::endl;
         return 1;
     }
