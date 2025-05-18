@@ -61,6 +61,11 @@ private:
     QWaitCondition dataReady;
     bool running;
     bool terminating;
+    bool threads_initialized;  // Flag to track if threads are initialized
+    
+    // Thread pool management
+    void initializeThreadPool();
+    void cleanupThreadPool();
     
     // Computational data
     double *A;              // Matrix A

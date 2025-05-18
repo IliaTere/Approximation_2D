@@ -19,7 +19,7 @@ MainWindow::MainWindow(double a, double b, double c, double d,
       nx(nx), ny(ny), mx(mx), my(my), 
       k(k), eps(eps), max_its(max_its), p(p),
       zoom_factor(1.0), paint_mode(what_to_paint::function),
-      running(false), terminating(false) {
+      running(false), terminating(false), threads_initialized(false) {
           
     setWindowTitle("2D Function Approximation");
     setMinimumSize(100, 100);
@@ -61,10 +61,10 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     centralWidget->setLayout(layout);
     setCentralWidget(centralWidget);
     
-    // Создание и запуск таймера обновления
+    // Создание и запуск таймера
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::updateUI);
-    timer->start(50); // Обновление каждые 50мс (более частые обновления)
+    timer->start(50); // Обновление каждые 50мс
     
     int n = (nx + 1) * (ny + 1);
     
@@ -92,6 +92,7 @@ MainWindow::MainWindow(double a, double b, double c, double d,
     threads = new pthread_t[p];
     args = new Args[p];
     
+    initializeThreadPool();
     startComputation();
     
     updateInfoPanel();
@@ -102,6 +103,57 @@ MainWindow::~MainWindow() {
         QMutexLocker locker(&dataMutex);
         terminating = true;
         dataReady.wakeAll();
+    }
+    
+    cleanupThreadPool();
+    
+    free_results();
+    delete[] I;
+    delete[] A;
+    delete[] B;
+    delete[] x;
+    delete[] r;
+    delete[] u;
+    delete[] v;
+    delete[] args;
+    delete[] threads;
+}
+
+void MainWindow::initializeThreadPool() {
+    if (threads_initialized) {
+        return;
+    }
+    
+    for (int i = 1; i < p; ++i) {
+        args[i].a = a;
+        args[i].b = b;
+        args[i].c = c;
+        args[i].d = d;
+        args[i].eps = eps;
+        args[i].I = I;
+        args[i].A = A;
+        args[i].B = B;
+        args[i].x = x;
+        args[i].r = r;
+        args[i].u = u;
+        args[i].v = v;
+        args[i].nx = nx;
+        args[i].ny = ny;
+        args[i].maxit = max_its;
+        args[i].p = p;
+        args[i].k = i;
+        args[i].f = func.f;
+        args[i].completed = false;
+        
+        pthread_create(&threads[i], nullptr, &::solution, &args[i]);
+    }
+    
+    threads_initialized = true;
+}
+
+void MainWindow::cleanupThreadPool() {
+    if (!threads_initialized) {
+        return;
     }
     
     // Make sure we join threads only if they were started
@@ -115,16 +167,41 @@ MainWindow::~MainWindow() {
         }
     }
     
-    free_results();
-    delete[] I;
-    delete[] A;
-    delete[] B;
-    delete[] x;
-    delete[] r;
-    delete[] u;
-    delete[] v;
-    delete[] args;
-    delete[] threads;
+    threads_initialized = false;
+}
+
+void MainWindow::startComputation() {
+    QMutexLocker locker(&dataMutex);
+    running = true;
+    // Update immediately to show "Computing..." status
+    updateInfoPanel();
+    
+    // Update computation parameters for all threads
+    for (int i = 0; i < p; ++i) {
+        args[i].a = a;
+        args[i].b = b;
+        args[i].c = c;
+        args[i].d = d;
+        args[i].eps = eps;
+        args[i].I = I;
+        args[i].A = A;
+        args[i].B = B;
+        args[i].x = x;
+        args[i].r = r;
+        args[i].u = u;
+        args[i].v = v;
+        args[i].nx = nx;
+        args[i].ny = ny;
+        args[i].maxit = max_its;
+        args[i].p = p;
+        args[i].k = i;
+        args[i].f = func.f;
+        args[i].completed = false;
+    }
+    
+    // Start main computation thread
+    main_thread = pthread_self();
+    ::solution(&args[0]);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -241,42 +318,6 @@ void MainWindow::updateUI() {
         renderer->setData(x, nx + 1, ny + 1);
         renderer->update();
     }
-}
-
-void MainWindow::startComputation() {
-    QMutexLocker locker(&dataMutex);
-    running = true;
-    // Update immediately to show "Computing..." status
-    updateInfoPanel();
-    
-    for (int i = 0; i < p; ++i) {
-        args[i].a = a;
-        args[i].b = b;
-        args[i].c = c;
-        args[i].d = d;
-        args[i].eps = eps;
-        args[i].I = I;
-        args[i].A = A;
-        args[i].B = B;
-        args[i].x = x;
-        args[i].r = r;
-        args[i].u = u;
-        args[i].v = v;
-        args[i].nx = nx;
-        args[i].ny = ny;
-        args[i].maxit = max_its;
-        args[i].p = p;
-        args[i].k = i;
-        args[i].f = func.f;
-        args[i].completed = false;
-    }
-    
-    for (int i = 1; i < p; ++i) {
-        pthread_create(&threads[i], nullptr, &gui_solution, &args[i]);
-    }
-    
-    // Start computation without waiting
-    pthread_create(&main_thread, nullptr, &gui_solution, &args[0]);
 }
 
 void MainWindow::toggleFunction() {
